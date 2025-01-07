@@ -1,7 +1,22 @@
 "use client";
-import Dropdown from "react-dropdown";
-import "react-dropdown/style.css";
 import ConnectWallet from "@/components/ConnectWallet";
+import {
+  Button,
+  Input,
+  Select,
+  Form,
+  message,
+  Steps,
+  theme,
+  Typography,
+  Card,
+  Space,
+  notification
+} from "antd";
+import type { FormProps } from "antd";
+import { CloseOutlined } from "@ant-design/icons";
+type NotificationType = 'success' | 'info' | 'warning' | 'error';
+
 import {
   dob,
   createSporeCluster,
@@ -10,14 +25,47 @@ import {
 } from "@ckb-ccc/spore";
 import { ccc } from "@ckb-ccc/connector-react";
 import { useEffect, useState } from "react";
+
+const steps = [
+  {
+    title: "Create Cluster",
+    content: "First-content",
+  },
+
+  {
+    title: "Create Spore",
+    content: "Second-content",
+  },
+  {
+    title: "Check Spore",
+    content: "Last-content",
+  },
+];
 function generateClusterDescriptionUnderDobProtocol(
-  client: ccc.Client
-): string {
+  client: ccc.Client,
+  formValues?: any,
+  clusterName?: string
+): { dob1Pattern: dob.PatternElementDob1[]; description: string } {
   /**
    * Generation example for DOB0
    */
-  const clusterDescription = "My Test Cluster";
-
+  const clusterDescription = clusterName || "test cluster";
+  const coverImg = (formValues && formValues.images && formValues.images[0]&&formValues.images[0].url) || {
+    url: "btcfs://6930318f91db75ee7279f99c69e75f19582e1bbc31d260140323ab36df3255f8i0",
+    width: "100%",
+    height: "100%",
+    positionX: 0,
+    positionY: 0,
+  };
+  const elementsImg = (formValues &&
+    formValues.images &&
+    formValues.images[1]) || {
+    url: "btcfs://82f12bf2d9ed04e7e5098f10898eb6f22c79d2514505711d529bed6a8d26e816i0",
+    width: "20",
+    height: "20",
+    positionX: 5,
+    positionY: 20,
+  };
   const dob0Pattern: dob.PatternElementDob0[] = [
     {
       traitName: "Cover",
@@ -51,7 +99,7 @@ function generateClusterDescriptionUnderDobProtocol(
       traitArgs: [
         [
           ["*"],
-          `<image width='100%' height='100%' href='btcfs://6930318f91db75ee7279f99c69e75f19582e1bbc31d260140323ab36df3255f8i0' />`,
+          `<image width='${coverImg.width}' height='${coverImg.width}'  x='${coverImg.positionX}' y='${coverImg.positionY}' href='${coverImg.url}' />`,
         ],
       ],
     },
@@ -64,7 +112,7 @@ function generateClusterDescriptionUnderDobProtocol(
       traitArgs: [
         [
           ["*"],
-          "<image width='20' height='20'  x='5' y='20' href='btcfs://82f12bf2d9ed04e7e5098f10898eb6f22c79d2514505711d529bed6a8d26e816i0' />",
+          `<image width='${elementsImg.width}' height='${elementsImg.width}'  x='${elementsImg.positionX}' y='${elementsImg.positionY}' href='${elementsImg.url}' />`,
         ],
       ],
     },
@@ -87,14 +135,37 @@ function generateClusterDescriptionUnderDobProtocol(
     },
   };
   const dob1ClusterDescription = dob.encodeClusterDescriptionForDob1(dob1);
-  console.log("dob1 =", dob1ClusterDescription);
+  console.log("dob1:", dob1ClusterDescription);
 
-  return dob1ClusterDescription;
+  return {
+    dob1Pattern: dob1Pattern,
+    description: dob1ClusterDescription,
+  };
 }
 export default function Home() {
   const signer = ccc.useSigner();
   const [clusterName, SetClusterName] = useState<string>("");
   const [dnaText, SetDnaText] = useState<string>("");
+  const [current, setCurrent] = useState(0);
+  const { token } = theme.useToken();
+  const [form] = Form.useForm();
+  const [api, contextHolder] = notification.useNotification();
+  const openNotificationWithIcon = (type: NotificationType,title:string,message:string) => {
+    api[type]({
+      message: title,
+      description:message,
+      duration: 0,
+    });
+  };
+  const next = () => {
+    setCurrent(current + 1);
+  };
+
+  const prev = () => {
+    setCurrent(current - 1);
+  };
+  const items = steps.map((item) => ({ key: item.title, title: item.title }));
+
   const [selectCluster, SetSelectCluster] = useState<
     { value: string; label: string } | undefined
   >(undefined);
@@ -113,16 +184,20 @@ export default function Home() {
 
       data: {
         name: clusterName,
-        description: generateClusterDescriptionUnderDobProtocol(client),
+        description:
+          generateClusterDescriptionUnderDobProtocol(client).description,
       },
     });
-    console.log("clusterId:", id);
+    openNotificationWithIcon('info',"clusterId:", id);
     await tx.completeFeeBy(signer);
     tx = await signer.signTransaction(tx);
     const txHash = await signer.sendTransaction(tx);
+    openNotificationWithIcon('success',"Transaction sent:", txHash);
+
     console.log("Transaction sent:", txHash);
     await signer.client.waitTransaction(txHash);
-    console.log("Transaction committed:", txHash);
+    openNotificationWithIcon('success',"Transaction committed:", txHash);
+    setCurrent(1)
     fecthClusters();
   };
   const CreateSpore = async () => {
@@ -146,14 +221,16 @@ export default function Home() {
       },
       clusterMode: "clusterCell",
     });
-    console.log("sporeId:", id);
+    openNotificationWithIcon('info',"sporeId:", id);
     // Complete transaction
     await tx.completeFeeBy(signer);
     tx = await signer.signTransaction(tx);
     const txHash = await signer.sendTransaction(tx);
-    console.log("Transaction sent:", txHash);
+    openNotificationWithIcon('success',"Transaction sent:", txHash);
     await signer.client.waitTransaction(txHash);
-    console.log("Transaction committed:", txHash);
+    openNotificationWithIcon('success',"Transaction committed:", txHash);
+    setCurrent(2)
+
   };
   const fecthClusters = async () => {
     let list = [];
@@ -178,49 +255,174 @@ export default function Home() {
       synced = true;
     };
   }, [signer]);
+  const contentStyle: React.CSSProperties = {
+    lineHeight: "2",
+    textAlign: "center",
+    color: token.colorTextTertiary,
+    backgroundColor: token.colorFillAlter,
+    borderRadius: token.borderRadiusLG,
+    border: `1px dashed ${token.colorBorder}`,
+    marginTop: 16,
+  };
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <ConnectWallet></ConnectWallet>
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <input
-          type="text"
-          onChange={(e) => SetClusterName(e.target.value)}
-          placeholder="cluster name"
-        />
-        <button
-          className="cursor-pointer rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-          onClick={async () => {
-            CreateCluster();
-          }}
-        >
-          Create Cluster
-        </button>
-        <Dropdown
-          options={clusterList.map((cluster) => ({
-            value: cluster.id,
-            label: cluster.name,
-          }))}
-          onChange={(option) =>
-            SetSelectCluster(option as { value: string; label: string })
-          }
-          value={{ value: clusterList[0].id, label: clusterList[0].name }}
-          placeholder="Select an Cluster"
-        />
-        <input
-          type="text"
-          value={dnaText}
-          onChange={(e) => SetDnaText(e.target.value)}
-          placeholder="spore dna"
-        />
-        <button
-          className="cursor-pointer rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-          onClick={async () => {
-            CreateSpore();
-          }}
-        >
-          Create Spore
-        </button>
-      </main>
+    <div className="w-[1000px] m-auto min-h-screen p-8 pb-20 font-[family-name:var(--font-geist-sans)]">
+        {contextHolder}
+      <Steps current={current} items={items} />
+      <div style={contentStyle}>
+        {current === 0 && (
+          <div style={{ textAlign: "left",padding:'20px' }}>
+            <Typography.Title level={5} style={{ margin: 20 }}>
+              Cluster Name
+            </Typography.Title>
+            <Input
+              style={{ width: 200, margin: 20 }}
+              type="text"
+              onChange={(e) => SetClusterName(e.target.value)}
+              placeholder="cluster name"
+            />
+            <Typography.Title level={5} style={{ margin: 20 }}>
+              Cluster images
+            </Typography.Title>
+            <Form
+              labelCol={{ span: 4 }}
+              wrapperCol={{ span: 20 }}
+              form={form}
+              name="dynamic_form_complex"
+              style={{ maxWidth: '100%'}}
+              autoComplete="off"
+              initialValues={{ images: [{}] }}
+            >
+              <Form.List name={'images'}>
+                {(fields,{ add, remove }) => (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      rowGap: 16,
+                    }}
+                  >
+                    {fields.map((field) => (
+                      <Space key={field.key}>
+                        <Form.Item noStyle name={[field.name, "url"]}  rules={[{ required: true, message: 'Missing url' }]}>
+                          <Input placeholder="image url" />
+                        </Form.Item>
+                        <Form.Item noStyle name={[field.name, "width"]}  rules={[{ required: true, message: 'Missing width' }]}>
+                          <Input placeholder="image width" />
+                        </Form.Item>
+                        <Form.Item noStyle name={[field.name, "height"]}  rules={[{ required: true, message: 'Missing height' }]}>
+                          <Input placeholder="image height" />
+                        </Form.Item>
+                        <Form.Item noStyle name={[field.name, "positionX"]}  rules={[{ required: true, message: 'Missing positionX' }]}>
+                          <Input placeholder="positionX" />
+                        </Form.Item>
+                        <Form.Item noStyle name={[field.name, "positionY"]}  rules={[{ required: true, message: 'Missing positionY' }]}>
+                          <Input placeholder="positionY" />
+                        </Form.Item>
+                        <CloseOutlined
+                          onClick={() => {
+                            remove(field.name);
+                          }}
+                        />
+                      </Space>
+                    ))}
+                    {fields.length < 2 && (
+                      <Button type="dashed" onClick={() => add()} block>
+                        + Add Image
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </Form.List>
+
+              <Form.Item noStyle shouldUpdate>
+                {() => (
+                  <Typography style={{ textAlign: "left" }}>
+                    <pre>
+                      {JSON.stringify(
+                        generateClusterDescriptionUnderDobProtocol(
+                          client,
+                          form.getFieldsValue()
+                        ).dob1Pattern,
+                        null,
+                        2
+                      )}
+                    </pre>
+                  </Typography>
+                )}
+              </Form.Item>
+            </Form>
+            <Button
+              style={{ width: 200, margin: 20 }}
+              onClick={async () => {
+                CreateCluster();
+              }}
+            >
+              Create Cluster
+            </Button>
+          </div>
+        )}
+
+        {current === 1 && (
+          <div>
+            <Select
+              style={{ width: 200, margin: 20 }}
+              options={clusterList.map((cluster) => ({
+                value: cluster.id,
+                label: cluster.name,
+              }))}
+              onChange={(option) =>
+                SetSelectCluster(option as { value: string; label: string })
+              }
+              value={{ value: clusterList[0].id, label: clusterList[0].name }}
+              placeholder="Select an Cluster"
+            />
+            <Input
+              type="text"
+              value={dnaText}
+              onChange={(e) => SetDnaText(e.target.value)}
+              placeholder="spore dna"
+            />
+            <Button
+              style={{ width: 200, margin: 20 }}
+              onClick={async () => {
+                CreateSpore();
+              }}
+            >
+              Create Spore
+            </Button>
+          </div>
+          
+        )}
+         {current === 2 && (
+          <div>
+            go to 
+          </div>
+          
+        )}
+      </div>
+      <div style={{ marginTop: 24 }}>
+        {current < steps.length - 1 && (
+          <Button type="primary" onClick={() => next()}>
+            Next
+          </Button>
+        )}
+        {current === steps.length - 1 && (
+          <Button
+            type="primary"
+            onClick={() => message.success("Processing complete!")}
+          >
+            Done
+          </Button>
+        )}
+        {current > 0 && (
+          <Button style={{ margin: "0 8px" }} onClick={() => prev()}>
+            Previous
+          </Button>
+        )}
+      </div>
+
+      {/* <ConnectWallet></ConnectWallet> */}
     </div>
   );
 }

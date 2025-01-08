@@ -69,10 +69,11 @@ function generateClusterDescriptionUnderDobProtocol(
   const dob0Pattern: dob.PatternElementDob0[] = [
     {
       traitName: "Cover",
-      dobType: "Number",
+      dobType: "String",
       dnaOffset: 0,
       dnaLength: 6,
-      patternType: "rawNumber",
+      patternType: "options",
+      traitArgs: ["GOLD", "SILVER", "COPPER", "BLUE"],
     },
     {
       traitName: "Level",
@@ -191,11 +192,10 @@ export default function Home() {
     });
     openNotificationWithIcon('info',"clusterId:", id);
     await tx.completeFeeBy(signer);
-    tx = await signer.signTransaction(tx);
+    // tx = await signer.signTransaction(tx);
     const txHash = await signer.sendTransaction(tx);
     openNotificationWithIcon('info',"Transaction sent:", txHash);
 
-    openNotificationWithIcon('info',"Transaction sent:", txHash);
     await signer.client.waitTransaction(txHash);
     openNotificationWithIcon('success',"Transaction committed:", txHash);
     setCurrent(1)
@@ -225,9 +225,9 @@ export default function Home() {
     openNotificationWithIcon('info',"sporeId:", id);
     // Complete transaction
     await tx.completeFeeBy(signer);
-    tx = await signer.signTransaction(tx);
+    // tx = await signer.signTransaction(tx);
     const txHash = await signer.sendTransaction(tx);
-    openNotificationWithIcon('success',"Transaction sent:", txHash);
+    openNotificationWithIcon('info',"Transaction sent:", txHash);
     await signer.client.waitTransaction(txHash);
     openNotificationWithIcon('success',"Transaction committed:", txHash);
     setCurrent(2)
@@ -250,7 +250,7 @@ export default function Home() {
         name: cluster.clusterData.name,
       });
     }
-    setClusterList((prevState) => [...prevState, ...list]);
+    setClusterList(list);
   };
   useEffect(() => {
     

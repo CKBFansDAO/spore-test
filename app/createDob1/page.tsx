@@ -49,14 +49,16 @@ function generateClusterDescriptionUnderDobProtocol(
   /**
    * Generation example for DOB0
    */
+  console.log(formValues)
   const clusterDescription = clusterName || "test cluster";
-  const coverImg = (formValues && formValues.images && formValues.images[0]&&formValues.images[0].url) || {
+  const coverImg = (formValues && formValues.images&&formValues.images[0].url && formValues.images[0]) || {
     url: "btcfs://6930318f91db75ee7279f99c69e75f19582e1bbc31d260140323ab36df3255f8i0",
     width: "100%",
     height: "100%",
     positionX: 0,
     positionY: 0,
   };
+  console.log(coverImg)
   const elementsImg = (formValues &&
     formValues.images &&
     formValues.images[1]) || {
@@ -99,7 +101,7 @@ function generateClusterDescriptionUnderDobProtocol(
       traitArgs: [
         [
           ["*"],
-          `<image width='${coverImg.width}' height='${coverImg.width}'  x='${coverImg.positionX}' y='${coverImg.positionY}' href='${coverImg.url}' />`,
+          `<image width='${coverImg.width}' height='${coverImg.height}'  x='${coverImg.positionX}' y='${coverImg.positionY}' href='${coverImg.url}' />`,
         ],
       ],
     },
@@ -135,7 +137,8 @@ function generateClusterDescriptionUnderDobProtocol(
     },
   };
   const dob1ClusterDescription = dob.encodeClusterDescriptionForDob1(dob1);
-  console.log("dob1:", dob1ClusterDescription);
+  
+  console.log("dob1:", dob1);
 
   return {
     dob1Pattern: dob1Pattern,
@@ -166,9 +169,7 @@ export default function Home() {
   };
   const items = steps.map((item) => ({ key: item.title, title: item.title }));
 
-  const [selectCluster, SetSelectCluster] = useState<
-    { value: string; label: string } | undefined
-  >(undefined);
+  const [selectCluster, SetSelectCluster] = useState('');
 
   const client = new ccc.ClientPublicTestnet();
   const [clusterList, setClusterList] = useState([
@@ -179,13 +180,14 @@ export default function Home() {
   ]);
   const CreateCluster = async () => {
     if (!signer) return;
+    
     let { tx, id } = await createSporeCluster({
       signer,
 
       data: {
         name: clusterName,
         description:
-          generateClusterDescriptionUnderDobProtocol(client).description,
+          generateClusterDescriptionUnderDobProtocol(client,form.getFieldsValue(),clusterName).description,
       },
     });
     openNotificationWithIcon('info',"clusterId:", id);
@@ -204,6 +206,7 @@ export default function Home() {
     if (!signer) return;
     if (!selectCluster) return;
     if (!dnaText) return;
+    console.log(selectCluster)
     const hasher = new ccc.HasherCkb(7);
     hasher.update(ccc.bytesFrom(dnaText, "utf8"));
     let dna = ccc.bytesFrom(hasher.digest());
@@ -217,7 +220,7 @@ export default function Home() {
       data: {
         contentType: "dob/1",
         content: ccc.bytesFrom(content, "utf8"),
-        clusterId: selectCluster?.value,
+        clusterId: selectCluster
       },
       clusterMode: "clusterCell",
     });
@@ -372,9 +375,8 @@ export default function Home() {
                 label: cluster.name,
               }))}
               onChange={(option) =>
-                SetSelectCluster(option as { value: string; label: string })
+                SetSelectCluster(option)
               }
-              value={{ value: clusterList[0].id, label: clusterList[0].name }}
               placeholder="Select an Cluster"
             />
             <Input

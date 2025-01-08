@@ -1,5 +1,4 @@
 "use client";
-import ConnectWallet from "@/components/ConnectWallet";
 import {
   Button,
   Input,
@@ -9,13 +8,11 @@ import {
   Steps,
   theme,
   Typography,
-  Card,
   Space,
-  notification
+  notification,
 } from "antd";
-import type { FormProps } from "antd";
 import { CloseOutlined } from "@ant-design/icons";
-type NotificationType = 'success' | 'info' | 'warning' | 'error';
+type NotificationType = "success" | "info" | "warning" | "error";
 
 import {
   dob,
@@ -41,16 +38,29 @@ const steps = [
     content: "Last-content",
   },
 ];
+interface FormImage {
+  url:string,
+  width:string,
+  height:string,
+  positionX:string,
+  positionY:string,
+
+}
 function generateClusterDescriptionUnderDobProtocol(
   client: ccc.Client,
-  formValues?: any,
+  formValues?: {
+    images:FormImage[]
+  },
   clusterName?: string
 ): { dob1Pattern: dob.PatternElementDob1[]; description: string } {
   /**
    * Generation example for DOB0
    */
   const clusterDescription = clusterName || "test cluster";
-  const coverImg = (formValues && formValues.images&&formValues.images[0].url && formValues.images[0]) || {
+  const coverImg = (formValues &&
+    formValues.images &&
+    formValues.images[0].url &&
+    formValues.images[0]) || {
     url: "btcfs://6930318f91db75ee7279f99c69e75f19582e1bbc31d260140323ab36df3255f8i0",
     width: "100%",
     height: "100%",
@@ -136,7 +146,7 @@ function generateClusterDescriptionUnderDobProtocol(
     },
   };
   const dob1ClusterDescription = dob.encodeClusterDescriptionForDob1(dob1);
-  
+
   // console.log("dob1:", dob1);
 
   return {
@@ -152,11 +162,15 @@ export default function Home() {
   const { token } = theme.useToken();
   const [form] = Form.useForm();
   const [api, contextHolder] = notification.useNotification();
-  const [synced,SetSynced] = useState(false)
-  const openNotificationWithIcon = (type: NotificationType,title:string,message:string) => {
+  const [synced, SetSynced] = useState(false);
+  const openNotificationWithIcon = (
+    type: NotificationType,
+    title: string,
+    message: string
+  ) => {
     api[type]({
       message: title,
-      description:message,
+      description: message,
       duration: 0,
     });
   };
@@ -169,7 +183,7 @@ export default function Home() {
   };
   const items = steps.map((item) => ({ key: item.title, title: item.title }));
 
-  const [selectCluster, SetSelectCluster] = useState('');
+  const [selectCluster, SetSelectCluster] = useState("");
 
   const client = new ccc.ClientPublicTestnet();
   const [clusterList, setClusterList] = useState([
@@ -180,25 +194,28 @@ export default function Home() {
   ]);
   const CreateCluster = async () => {
     if (!signer) return;
-    
-    let { tx, id } = await createSporeCluster({
+
+    const { tx, id } = await createSporeCluster({
       signer,
 
       data: {
         name: clusterName,
-        description:
-          generateClusterDescriptionUnderDobProtocol(client,form.getFieldsValue(),clusterName).description,
+        description: generateClusterDescriptionUnderDobProtocol(
+          client,
+          form.getFieldsValue(),
+          clusterName
+        ).description,
       },
     });
-    openNotificationWithIcon('info',"clusterId:", id);
+    openNotificationWithIcon("info", "clusterId:", id);
     await tx.completeFeeBy(signer);
     // tx = await signer.signTransaction(tx);
     const txHash = await signer.sendTransaction(tx);
-    openNotificationWithIcon('info',"Transaction sent:", txHash);
+    openNotificationWithIcon("info", "Transaction sent:", txHash);
 
     await signer.client.waitTransaction(txHash);
-    openNotificationWithIcon('success',"Transaction committed:", txHash);
-    setCurrent(1)
+    openNotificationWithIcon("success", "Transaction committed:", txHash);
+    setCurrent(1);
     fecthClusters();
   };
   const CreateSpore = async () => {
@@ -213,37 +230,36 @@ export default function Home() {
     const hexedDna = ccc.bytesTo(dna, "hex"); // no leading "0x"
     const content = `{"dna":"${hexedDna}"}`;
     // Build transaction
-    let { tx, id } = await createSpore({
+    const { tx, id } = await createSpore({
       signer,
       data: {
         contentType: "dob/1",
         content: ccc.bytesFrom(content, "utf8"),
-        clusterId: selectCluster
+        clusterId: selectCluster,
       },
       clusterMode: "clusterCell",
     });
-    openNotificationWithIcon('info',"sporeId:", id);
+    openNotificationWithIcon("info", "sporeId:", id);
     // Complete transaction
     await tx.completeFeeBy(signer);
     // tx = await signer.signTransaction(tx);
     const txHash = await signer.sendTransaction(tx);
-    openNotificationWithIcon('info',"Transaction sent:", txHash);
+    openNotificationWithIcon("info", "Transaction sent:", txHash);
     await signer.client.waitTransaction(txHash);
-    openNotificationWithIcon('success',"Transaction committed:", txHash);
-    setCurrent(2)
-
+    openNotificationWithIcon("success", "Transaction committed:", txHash);
+    setCurrent(2);
   };
   const fecthClusters = async () => {
-    let list = [];
+    const list = [];
     if (!signer) {
       return;
     }
-    SetSynced(false)
+    SetSynced(false);
     for await (const cluster of findSporeClustersBySigner({
       signer,
       order: "desc",
     })) {
-      if(synced) return
+      if (synced) return;
 
       list.push({
         id: cluster.cluster.cellOutput.type?.args || "",
@@ -253,10 +269,9 @@ export default function Home() {
     setClusterList(list);
   };
   useEffect(() => {
-    
     fecthClusters();
     return () => {
-      SetSynced(true)
+      SetSynced(true);
     };
   }, [signer]);
   const contentStyle: React.CSSProperties = {
@@ -271,11 +286,11 @@ export default function Home() {
 
   return (
     <div className="w-[1000px] m-auto min-h-screen p-8 pb-20 font-[family-name:var(--font-geist-sans)]">
-        {contextHolder}
+      {contextHolder}
       <Steps current={current} items={items} />
       <div style={contentStyle}>
         {current === 0 && (
-          <div style={{ textAlign: "left",padding:'20px' }}>
+          <div style={{ textAlign: "left", padding: "20px" }}>
             <Typography.Title level={5} style={{ margin: 20 }}>
               Cluster Name
             </Typography.Title>
@@ -293,12 +308,12 @@ export default function Home() {
               wrapperCol={{ span: 20 }}
               form={form}
               name="dynamic_form_complex"
-              style={{ maxWidth: '100%'}}
+              style={{ maxWidth: "100%" }}
               autoComplete="off"
               initialValues={{ images: [{}] }}
             >
-              <Form.List name={'images'}>
-                {(fields,{ add, remove }) => (
+              <Form.List name={"images"}>
+                {(fields, { add, remove }) => (
                   <div
                     style={{
                       display: "flex",
@@ -308,19 +323,45 @@ export default function Home() {
                   >
                     {fields.map((field) => (
                       <Space key={field.key}>
-                        <Form.Item noStyle name={[field.name, "url"]}  rules={[{ required: true, message: 'Missing url' }]}>
+                        <Form.Item
+                          noStyle
+                          name={[field.name, "url"]}
+                          rules={[{ required: true, message: "Missing url" }]}
+                        >
                           <Input placeholder="image url" />
                         </Form.Item>
-                        <Form.Item noStyle name={[field.name, "width"]}  rules={[{ required: true, message: 'Missing width' }]}>
+                        <Form.Item
+                          noStyle
+                          name={[field.name, "width"]}
+                          rules={[{ required: true, message: "Missing width" }]}
+                        >
                           <Input placeholder="image width" />
                         </Form.Item>
-                        <Form.Item noStyle name={[field.name, "height"]}  rules={[{ required: true, message: 'Missing height' }]}>
+                        <Form.Item
+                          noStyle
+                          name={[field.name, "height"]}
+                          rules={[
+                            { required: true, message: "Missing height" },
+                          ]}
+                        >
                           <Input placeholder="image height" />
                         </Form.Item>
-                        <Form.Item noStyle name={[field.name, "positionX"]}  rules={[{ required: true, message: 'Missing positionX' }]}>
+                        <Form.Item
+                          noStyle
+                          name={[field.name, "positionX"]}
+                          rules={[
+                            { required: true, message: "Missing positionX" },
+                          ]}
+                        >
                           <Input placeholder="positionX" />
                         </Form.Item>
-                        <Form.Item noStyle name={[field.name, "positionY"]}  rules={[{ required: true, message: 'Missing positionY' }]}>
+                        <Form.Item
+                          noStyle
+                          name={[field.name, "positionY"]}
+                          rules={[
+                            { required: true, message: "Missing positionY" },
+                          ]}
+                        >
                           <Input placeholder="positionY" />
                         </Form.Item>
                         <CloseOutlined
@@ -375,9 +416,7 @@ export default function Home() {
                 value: cluster.id,
                 label: cluster.name,
               }))}
-              onChange={(option) =>
-                SetSelectCluster(option)
-              }
+              onChange={(option) => SetSelectCluster(option)}
               placeholder="Select an Cluster"
             />
             <Input
@@ -395,14 +434,8 @@ export default function Home() {
               Create Spore
             </Button>
           </div>
-          
         )}
-         {current === 2 && (
-          <div>
-            go to 
-          </div>
-          
-        )}
+        {current === 2 && <div>go to</div>}
       </div>
       <div style={{ marginTop: 24 }}>
         {current < steps.length - 1 && (

@@ -49,7 +49,6 @@ function generateClusterDescriptionUnderDobProtocol(
   /**
    * Generation example for DOB0
    */
-  console.log(formValues)
   const clusterDescription = clusterName || "test cluster";
   const coverImg = (formValues && formValues.images&&formValues.images[0].url && formValues.images[0]) || {
     url: "btcfs://6930318f91db75ee7279f99c69e75f19582e1bbc31d260140323ab36df3255f8i0",
@@ -58,7 +57,6 @@ function generateClusterDescriptionUnderDobProtocol(
     positionX: 0,
     positionY: 0,
   };
-  console.log(coverImg)
   const elementsImg = (formValues &&
     formValues.images &&
     formValues.images[1]) || {
@@ -138,7 +136,7 @@ function generateClusterDescriptionUnderDobProtocol(
   };
   const dob1ClusterDescription = dob.encodeClusterDescriptionForDob1(dob1);
   
-  console.log("dob1:", dob1);
+  // console.log("dob1:", dob1);
 
   return {
     dob1Pattern: dob1Pattern,
@@ -195,9 +193,9 @@ export default function Home() {
     await tx.completeFeeBy(signer);
     tx = await signer.signTransaction(tx);
     const txHash = await signer.sendTransaction(tx);
-    openNotificationWithIcon('success',"Transaction sent:", txHash);
+    openNotificationWithIcon('info',"Transaction sent:", txHash);
 
-    console.log("Transaction sent:", txHash);
+    openNotificationWithIcon('info',"Transaction sent:", txHash);
     await signer.client.waitTransaction(txHash);
     openNotificationWithIcon('success',"Transaction committed:", txHash);
     setCurrent(1)
@@ -207,7 +205,6 @@ export default function Home() {
     if (!signer) return;
     if (!selectCluster) return;
     if (!dnaText) return;
-    console.log(selectCluster)
     const hasher = new ccc.HasherCkb(7);
     hasher.update(ccc.bytesFrom(dnaText, "utf8"));
     let dna = ccc.bytesFrom(hasher.digest());
@@ -241,6 +238,7 @@ export default function Home() {
     if (!signer) {
       return;
     }
+    SetSynced(false)
     for await (const cluster of findSporeClustersBySigner({
       signer,
       order: "desc",

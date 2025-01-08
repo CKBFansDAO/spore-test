@@ -153,6 +153,7 @@ export default function Home() {
   const { token } = theme.useToken();
   const [form] = Form.useForm();
   const [api, contextHolder] = notification.useNotification();
+  const [synced,SetSynced] = useState(false)
   const openNotificationWithIcon = (type: NotificationType,title:string,message:string) => {
     api[type]({
       message: title,
@@ -244,6 +245,8 @@ export default function Home() {
       signer,
       order: "desc",
     })) {
+      if(synced) return
+
       list.push({
         id: cluster.cluster.cellOutput.type?.args || "",
         name: cluster.clusterData.name,
@@ -252,10 +255,10 @@ export default function Home() {
     setClusterList((prevState) => [...prevState, ...list]);
   };
   useEffect(() => {
-    let synced = false;
+    
     fecthClusters();
     return () => {
-      synced = true;
+      SetSynced(true)
     };
   }, [signer]);
   const contentStyle: React.CSSProperties = {
